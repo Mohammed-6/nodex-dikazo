@@ -16,6 +16,7 @@ const pageCategoryRouter = require("./routes/page-category");
 const orderRouter = require("./routes/order/coupon");
 const addressRouter = require("./routes/order/address");
 const structuredRouter = require("./routes/structure/structure");
+const ordersSchema = require("./routes/order/order");
 
 // frontend routes
 const frontCategoryRouter = require("./routes/front/category");
@@ -27,7 +28,9 @@ const homepageRouter = require("./routes/front/homepage");
 const app = express();
 
 // mongoose.connect("mongodb://localhost/dikazo_");
-mongoose.connect("mongodb+srv://rehankhan:B7uzwg8DlkIUJ9xb@cluster0.yimbm.mongodb.net/dikazo_?retryWrites=true&w=majority")
+mongoose.connect(
+  "mongodb+srv://rehankhan:B7uzwg8DlkIUJ9xb@cluster0.yimbm.mongodb.net/dikazo_?retryWrites=true&w=majority"
+);
 require("./models/product");
 require("./models/customer");
 
@@ -47,6 +50,7 @@ app.use(pageCategoryRouter);
 app.use(orderRouter);
 app.use(addressRouter);
 app.use(structuredRouter);
+app.use(ordersSchema);
 
 // frontend routes
 app.use("/v2", frontCategoryRouter);

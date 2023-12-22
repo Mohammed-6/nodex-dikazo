@@ -93,9 +93,9 @@ const productSchema = new Schema(
       convertVarient: [convertVarientSchema],
     },
     productStocks: {
-      unitPrice: { type: Number, required: false }, // mrp
-      sellerPrice: { type: Number, required: false },
-      sellingPrice: { type: Number, required: false },
+      unitPrice: { type: String, required: false }, // mrp
+      sellerPrice: { type: String, required: false },
+      sellingPrice: { type: String, required: false },
       discountFrom: { type: String, required: false },
       discountTo: { type: String, required: false },
       discount: { type: Number, required: false },

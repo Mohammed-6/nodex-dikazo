@@ -374,7 +374,7 @@ productRouter.post("/import-product", (req, res) => {
           { $set: stk },
           { upsert: true }
         );
-      });
+      })
     } else {
       delete colte._id;
       colte.productVariation.convertVarient = alldata.variant[i];
@@ -384,7 +384,7 @@ productRouter.post("/import-product", (req, res) => {
           temp.productId = response._id;
           await ProductStockModel.create(temp);
         });
-      });
+      })
     }
   });
   res.send("Product updated successfully");
