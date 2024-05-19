@@ -27,4 +27,22 @@ ordersRouter.post("/list-order", async function (req, res) {
     });
 });
 
+// Order detail
+ordersRouter.post("/order-detail/:id", async function (req, res) {
+  var OrderModel = mongoose.model("order", orderSchema);
+  await OrderModel.findOne({ orderCode: req.params.id })
+    .then(async (ord) => {
+      res.send({
+        type: "success",
+        message: "Order detail",
+        data: ord,
+      });
+    })
+    .catch(function (err) {
+      res.send({
+        type: "error",
+        message: err,
+      });
+    });
+});
 module.exports = ordersRouter;

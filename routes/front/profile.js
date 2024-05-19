@@ -20,6 +20,9 @@ const {
   customerWishlistSchema,
   customerCartSchema,
   customerSchema,
+  sellerFeedbackSchema,
+  sellerDeliverySchema,
+  productFeedbackSchema,
 } = require("../../models/customer");
 const { couponSchema, addressSchema } = require("../../models/order");
 
@@ -268,6 +271,7 @@ frontProfileRouter.post("/list-profile-orders", async function (req, res) {
   await OrderModel.find({
     customerId: customer.customerId,
   })
+    .sort({ created_at: -1 })
     .then(function (response) {
       res.send({
         type: "success",
@@ -303,6 +307,102 @@ frontProfileRouter.post("/list-profile-order/:id", async function (req, res) {
         type: "success",
         message: "Order list",
         data: response,
+      });
+    })
+    .catch(function (err) {
+      res.send({
+        type: "error",
+        message: err,
+      });
+    });
+});
+
+// submit seller feedback
+frontProfileRouter.post("/submit-seller-feedback", async function (req, res) {
+  const CustomerLoginModel = mongoose.model(
+    "customer_login",
+    customerLoginSchema
+  );
+  const customer = await CustomerLoginModel.findOne({
+    accessToken: req.body.customerId,
+  });
+
+  const SellerFeedbackModel = mongoose.model(
+    "seller_feedback",
+    sellerFeedbackSchema
+  );
+
+  const colte = req.body;
+  colte.customerId = customer.customerId;
+  await SellerFeedbackModel.create(colte)
+    .then((response) => {
+      res.send({
+        type: "success",
+        message: "Feedback submitted successfully",
+      });
+    })
+    .catch(function (err) {
+      res.send({
+        type: "error",
+        message: err,
+      });
+    });
+});
+
+// submit seller feedback
+frontProfileRouter.post("/submit-delivery-feedback", async function (req, res) {
+  const CustomerLoginModel = mongoose.model(
+    "customer_login",
+    customerLoginSchema
+  );
+  const customer = await CustomerLoginModel.findOne({
+    accessToken: req.body.customerId,
+  });
+
+  const DeliveryFeedbackModel = mongoose.model(
+    "delivery_feedback",
+    sellerDeliverySchema
+  );
+
+  const colte = req.body;
+  colte.customerId = customer.customerId;
+  await DeliveryFeedbackModel.create(colte)
+    .then((response) => {
+      res.send({
+        type: "success",
+        message: "Feedback submitted successfully",
+      });
+    })
+    .catch(function (err) {
+      res.send({
+        type: "error",
+        message: err,
+      });
+    });
+});
+
+// submit product review
+frontProfileRouter.post("/submit-product-feedback", async function (req, res) {
+  const CustomerLoginModel = mongoose.model(
+    "customer_login",
+    customerLoginSchema
+  );
+  const customer = await CustomerLoginModel.findOne({
+    accessToken: req.body.customerId,
+  });
+
+  const ProductFeedbackModel = mongoose.model(
+    "product_feedback",
+    productFeedbackSchema
+  );
+
+  const colte = req.body;
+  colte.customerId = customer.customerId;
+  await ProductFeedbackModel.create(colte)
+    .then((response) => {
+      res.send({
+        type: "success",
+        message: "Feedback submitted successfully",
       });
     })
     .catch(function (err) {

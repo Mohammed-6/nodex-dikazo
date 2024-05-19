@@ -4,6 +4,7 @@ const Schema = mongoose.Schema;
 const personalInfomration = new Schema({
   name: { type: String, required: true },
   email: { type: String, required: false },
+  panNo: { type: String, required: false },
   gender: { type: String, required: false },
   dob: { type: String, required: false },
   state: { type: String, required: false },

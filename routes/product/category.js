@@ -10,6 +10,8 @@ const { categorySchema } = require("../../models/product");
 categoryRouter.post("/list-category", async function (req, res) {
   var CategoryModel = mongoose.model("category", categorySchema);
   await CategoryModel.find({})
+    .populate({ path: "banner", select: "path" })
+    .populate({ path: "icon", select: "path" })
     .then(function (response) {
       res.send({
         type: "success",

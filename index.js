@@ -17,6 +17,7 @@ const orderRouter = require("./routes/order/coupon");
 const addressRouter = require("./routes/order/address");
 const structuredRouter = require("./routes/structure/structure");
 const ordersSchema = require("./routes/order/order");
+const menuSchema = require("./routes/product/menu");
 
 // frontend routes
 const frontCategoryRouter = require("./routes/front/category");
@@ -24,8 +25,10 @@ const frontProductRouter = require("./routes/front/product");
 const customerRouter = require("./routes/front/customer");
 const frontProfileRouter = require("./routes/front/profile");
 const homepageRouter = require("./routes/front/homepage");
+const goswiftRouter = require("./routes/logistic/goswift");
 
 const app = express();
+app.use("/public", express.static("public"));
 
 // mongoose.connect("mongodb://localhost/dikazo_");
 mongoose.connect(
@@ -51,6 +54,8 @@ app.use(orderRouter);
 app.use(addressRouter);
 app.use(structuredRouter);
 app.use(ordersSchema);
+app.use(menuSchema);
+app.use(goswiftRouter);
 
 // frontend routes
 app.use("/v2", frontCategoryRouter);

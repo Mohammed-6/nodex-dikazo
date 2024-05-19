@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const express = require("express");
 const uploadRouter = express.Router();
 const multer = require("multer");
@@ -6,15 +7,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 const AWS = require("aws-sdk");
 const fs = require("fs");
-
-// Configure AWS SDK
-AWS.config.update({
-  accessKeyId: "AKIA2OT2XIIGRVOMXSNP",
-  secretAccessKey: "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",
-  region: "ap-south-1",
-});
-
-const s3 = new AWS.S3();
+const { attachmentSchema } = require("../models/customer");
+const UploadModel = mongoose.model("upload", attachmentSchema);
 
 var storage = multer.diskStorage({
   destination: "public/uploads/",
@@ -31,39 +25,38 @@ app.use(express.static("./public/uploads"));
 
 uploadRouter.post("/upload", upload.array("attachment"), uploadFiles);
 async function uploadFiles(req, res) {
-  const alt = [];
+  let alt = [];
   await req.files.forEach(async function (file, i) {
-    const ll = await uploadToS3(file);
-    alt.push(ll.Location);
     // console.log(alt);
+    alt.push(file.path);
     if (req.files.length - 1 === i) {
-      res.json(alt);
+      res.json({ data: alt });
     }
   });
 }
 
 uploadRouter.post("/upload-single", upload.array("attachment"), uploadFile);
 async function uploadFile(req, res) {
-  const ll = await uploadToS3(req.files[0]);
-  res.json(ll.Location);
-}
-
-async function uploadToS3(file) {
-  // Upload a file to S3
-  const params = {
-    Bucket: "dikazo-te-ecom",
-    Key: file.filename,
-    Body: fs.createReadStream("public/uploads/" + file.filename),
+  const colte = {
+    destination: req.files[0].destination,
+    encoding: req.files[0].encoding,
+    fieldname: req.files[0].fieldname,
+    filename: req.files[0].filename,
+    mimetype: req.files[0].mimetype,
+    originalname: req.files[0].originalname,
+    path: req.files[0].path,
+    size: req.files[0].size,
   };
-
-  var s3upload = s3.upload(params).promise();
-  return s3upload
-    .then(function (data) {
-      //   console.log(data);
-      return data;
+  await UploadModel.create(colte)
+    .then(function (result) {
+      res.json({
+        status: true,
+        message: "File uploaded successfully",
+        data: req.files[0].path,
+      });
     })
     .catch(function (err) {
-      return err;
+      res.json({ status: false, message: "Error!", data: err });
     });
 }
 

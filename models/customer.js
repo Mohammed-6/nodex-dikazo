@@ -50,7 +50,67 @@ const customerCartSchema = new Schema(
   { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }
 );
 
+const sellerFeedbackSchema = new Schema(
+  {
+    sellerId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    orderId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    customerId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    rating: { type: Number, required: true },
+    isItemArrrived: { type: Boolean, required: true },
+    itemDesctibed: { type: Boolean, required: true },
+    sellerPromptService: { type: String, required: true },
+    comment: { type: String, required: false },
+  },
+  {
+    timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+  }
+);
+
+const sellerDeliverySchema = new Schema(
+  {
+    sellerId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    orderId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    customerId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    rating: { type: Number, required: true },
+  },
+  {
+    timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+  }
+);
+
+const productFeedbackSchema = new Schema(
+  {
+    productId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    productStockId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    orderId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    customerId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    rating: { type: Number, required: true },
+    headline: { type: String, required: true },
+    attachment: { type: Array, required: false },
+    review: { type: String, required: false },
+  },
+  {
+    timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+  }
+);
+
+const attachmentSchema = new Schema({
+  destination: { type: String },
+  encoding: { type: String },
+  fieldname: { type: String },
+  filename: { type: String },
+  mimetype: { type: String },
+  originalname: { type: String },
+  path: { type: String },
+  size: { type: Number },
+  status: { type: Boolean, required: false, default: true },
+});
+
 module.exports.customerLoginSchema = customerLoginSchema;
 module.exports.customerSchema = customerSchema;
 module.exports.customerWishlistSchema = customerWishlistSchema;
 module.exports.customerCartSchema = customerCartSchema;
+module.exports.sellerFeedbackSchema = sellerFeedbackSchema;
+module.exports.sellerDeliverySchema = sellerDeliverySchema;
+module.exports.productFeedbackSchema = productFeedbackSchema;
+module.exports.attachmentSchema = attachmentSchema;

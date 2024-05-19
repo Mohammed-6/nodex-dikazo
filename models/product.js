@@ -25,8 +25,16 @@ const categorySchema = new Schema(
   {
     oldId: { type: Number, required: false },
     name: { type: String, required: true },
-    banner: { type: String, required: false },
-    icon: { type: String, required: false },
+    banner: {
+      type: mongoose.SchemaTypes.ObjectId,
+      ref: "upload",
+      required: false,
+    },
+    icon: {
+      type: mongoose.SchemaTypes.ObjectId,
+      ref: "upload",
+      required: false,
+    },
     metaTitle: { type: String, required: false },
     metaDescription: { type: String, required: false },
     status: { type: Boolean, required: false },
@@ -114,7 +122,7 @@ const productSchema = new Schema(
       url: { type: String, required: false },
       title: { type: String, required: false },
       description: { type: String, required: false },
-      image: { type: String, required: false },
+      image: { type: Object, required: false },
     },
     category: [],
     shippingConfig: {
@@ -258,11 +266,22 @@ const orderSchema = new Schema(
     paymentMethod: { type: String, required: true },
     shippingCost: { type: String, required: true },
     paymentStatus: { type: String, required: false, default: "unpaid" },
+    orderStatus: { type: String, required: false, default: "pending" },
     orderDetail: orderGateway,
     productDetail: [prdInfo],
     promotionDetail: promotionSchema,
     addressDetail: addressDetail,
     paymentInformation: paymentInformation,
+    shippingDetail: { type: Array, required: false },
+  },
+  { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }
+);
+
+const menuSchema = new Schema(
+  {
+    parent: { type: String, required: false },
+    name: { type: String, required: true },
+    link: { type: String, required: true },
   },
   { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }
 );
@@ -274,3 +293,4 @@ module.exports.colorSchema = colorSchema;
 module.exports.productSchema = productSchema;
 module.exports.productStockSchema = productStock;
 module.exports.orderSchema = orderSchema;
+module.exports.menuSchema = menuSchema;
