@@ -4,6 +4,7 @@ const Schema = mongoose.Schema;
 const structureSchema = new Schema(
   {
     structureId: { type: String, required: true },
+    structureType: { type: String, required: false },
     name: { type: String, required: false },
     homepage: { type: Boolean, required: false },
   },

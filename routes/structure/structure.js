@@ -122,7 +122,7 @@ structureRouter.post("/get-content", function (req, res) {
       ContentModel.create(req.body).then((resp) => {
         res.send({
           type: "success",
-          message: "Content created successfully",
+          message: "Content select main",
           data: [resp],
         });
       });
@@ -133,7 +133,7 @@ structureRouter.post("/get-content", function (req, res) {
       }).then((resp) => {
         res.send({
           type: "success",
-          message: "Content created successfully",
+          message: "Content select remain",
           data: resp,
         });
       });

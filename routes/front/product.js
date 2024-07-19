@@ -24,8 +24,8 @@ const { couponSchema, addressSchema } = require("../../models/order");
 
 const Razorpay = require("razorpay");
 var instance = new Razorpay({
-  key_id: "rzp_test_s7rXzSSkEG43th",
-  key_secret: "s1jHaXqUDzoUqfZVHNnm9zbX",
+  key_id: "rzp_test_KRHgb1TJ7w5Y2Q",
+  key_secret: "UAGksRC45k8zLKaCKHK56nM4",
 });
 
 // load color
@@ -210,6 +210,8 @@ frontProductRouter.get("/get-product/:product", (req, res) => {
               keyDescription: 1,
               category: 1,
               cod: 1,
+              addtionalIformation: 1,
+              aboutItem: 1,
               "brd.name": 1,
             },
           },
@@ -376,7 +378,7 @@ frontProductRouter.post("/get-cart-item", checkUserLogin, async (req, res) => {
         {
           path: "productInformation.seller",
           model: "seller",
-          select: "personalInfomration.name",
+          select: "shopInformation.shopName",
         },
       ],
       select:
@@ -561,6 +563,7 @@ frontProductRouter.post("/create-order", checkUserLogin, async (req, res) => {
     promotionDetail: {},
     addressDetail: {},
     paymentInformation: {},
+    shippingDetail: "Processing",
   };
   await AddressModel.findOne({ _id: req.body.collect.address }).then(
     (address) => {
@@ -572,6 +575,7 @@ frontProductRouter.post("/create-order", checkUserLogin, async (req, res) => {
         locality: address.addressDetail.locality,
         city: address.addressDetail.city,
         state: address.addressDetail.state,
+        stateCode: address.addressDetail.stateCode,
         type: address.addressDetail.type,
       };
       orderin.addressDetail = add;
@@ -616,6 +620,7 @@ frontProductRouter.post("/create-order", checkUserLogin, async (req, res) => {
                   },
                   quantity: prd.quantity,
                   price: stock.sellingPrice,
+                  gst: stock.gst,
                   mrp: stock.mrp,
                   variantName: prd.variantName,
                   height: stock.height,
@@ -629,8 +634,13 @@ frontProductRouter.post("/create-order", checkUserLogin, async (req, res) => {
                   _id: sm._id,
                   name: sm.personalInfomration.name,
                   email: sm.personalInfomration.email,
+                  panNo: sm.personalInfomration.panNo,
                   shopName: sm.shopInformation.shopName,
                   shopAddress: sm.shopInformation.shopAddress,
+                  state: sm.shopInformation.state,
+                  city: sm.shopInformation.city,
+                  pincode: sm.shopInformation.pincode,
+                  stateCode: sm.shopInformation.stateCode,
                   shopPhone: sm.shopInformation.shopPhone,
                   gst: sm.shopInformation.gst,
                   trademark: sm.shopInformation.trademark,

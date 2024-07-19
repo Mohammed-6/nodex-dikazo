@@ -9,6 +9,8 @@ const personalInfomration = new Schema({
   dob: { type: String, required: false },
   state: { type: String, required: false },
   city: { type: String, required: false },
+  pincode: { type: Number, required: false },
+  stateCode: { type: Number, required: false },
   personalAddress: { type: String, required: false },
 });
 
@@ -22,6 +24,10 @@ const bankAccountInformation = new Schema({
 const shopInformation = new Schema({
   shopName: { type: String, required: false },
   shopAddress: { type: String, required: false },
+  state: { type: String, required: false },
+  city: { type: String, required: false },
+  pincode: { type: Number, required: false },
+  stateCode: { type: Number, required: false },
   shopPhone: { type: String, required: false },
   gst: { type: String, required: false },
   trademark: { type: String, required: false },

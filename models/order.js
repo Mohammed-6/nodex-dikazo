@@ -48,6 +48,7 @@ const addressDetail = new Schema({
   city: { type: String, required: true },
   state: { type: String, required: true },
   type: { type: String, required: true },
+  stateCode: { type: Number, required: true },
 });
 const addressSchema = new mongoose.Schema(
   {

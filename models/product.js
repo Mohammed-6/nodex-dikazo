@@ -57,6 +57,17 @@ const convertVarientSchema = new Schema({
   variantImage: [],
 });
 
+const addtionalIformationSchema = new Schema({
+  name: { type: String, required: false },
+  information: [
+    {
+      name: { type: String, required: false },
+      description: { type: String, required: false },
+    },
+  ],
+});
+
+const BrandModel = mongoose.model("brand", brandSchema);
 const productSchema = new Schema(
   {
     oldId: { type: String, required: false },
@@ -64,8 +75,7 @@ const productSchema = new Schema(
       name: { type: String, required: true },
       brand: {
         type: mongoose.Schema.Types.ObjectId,
-        required: false,
-        ref: "brand",
+        ref: BrandModel,
       },
       seller: {
         type: mongoose.Schema.Types.ObjectId,
@@ -115,16 +125,20 @@ const productSchema = new Schema(
       externalLink: { type: String, required: false },
       externalLinkText: { type: String, required: false },
     },
+    addtionalIformation: { type: [addtionalIformationSchema], required: false },
     productDescription: { type: String, required: false },
+    aboutItem: { type: Array, required: false },
+    productAddtionalDescription: { type: String, required: false },
     keyDescription: { type: Array, required: false },
     pdfSpecification: { type: String, required: false },
     seoMetaTags: {
       url: { type: String, required: false },
       title: { type: String, required: false },
       description: { type: String, required: false },
+      keyword: { type: String, required: false },
       image: { type: Object, required: false },
     },
-    category: [],
+    category: [mongoose.Schema.Types.ObjectId],
     shippingConfig: {
       freeShipping: { type: Boolean, required: false },
       flatRate: { type: Boolean, required: false },
@@ -157,7 +171,11 @@ const productSchema = new Schema(
 
 const productStock = new Schema(
   {
-    productId: { type: String, required: true },
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "product",
+      required: true,
+    },
     variantName: { type: String, required: true },
     sku: { type: String, required: false },
     slug: { type: String, required: false },
@@ -201,8 +219,16 @@ const orderGateway = new Schema({
 });
 
 const productDetail = new Schema({
-  productId: { type: String, required: false },
-  stockId: { type: String, required: false },
+  productId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "product",
+    required: false,
+  },
+  stockId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "product_stock",
+    required: false,
+  },
   name: { type: String, required: false },
   seoTitle: { type: String, required: false },
   sku: { type: String, required: false },
@@ -211,6 +237,7 @@ const productDetail = new Schema({
   quantity: { type: Number, required: false },
   price: { type: Number, required: false },
   mrp: { type: Number, required: false },
+  gst: { type: Number, required: false },
   variantName: { type: String, required: false },
   height: { type: String, required: false },
   width: { type: String, required: false },
@@ -227,6 +254,7 @@ const addressDetail = new Schema({
   locality: { type: String, required: true },
   city: { type: String, required: true },
   state: { type: String, required: true },
+  stateCode: { type: String, required: true },
   type: { type: String, required: true },
 });
 
@@ -234,8 +262,13 @@ const shopInformation = new Schema({
   sellerId: { type: mongoose.Schema.Types.ObjectId, required: false },
   name: { type: String, required: true },
   email: { type: String, required: false },
+  panNo: { type: String, required: false },
   shopName: { type: String, required: false },
   shopAddress: { type: String, required: false },
+  state: { type: String, required: false },
+  city: { type: String, required: false },
+  pincode: { type: String, required: false },
+  stateCode: { type: String, required: true },
   shopPhone: { type: String, required: false },
   gst: { type: String, required: false },
   trademark: { type: String, required: false },
@@ -244,6 +277,10 @@ const shopInformation = new Schema({
 const prdInfo = new Schema({
   productDetail: productDetail,
   shopInformation: shopInformation,
+  shippingStatus: { type: Boolean, required: false, default: false },
+  shippingDetail: { type: Object, required: false },
+  orderStatus: { type: Boolean, required: false, default: true },
+  shippingType: { type: String, required: false },
 });
 
 const paymentInformation = new Schema({
@@ -272,7 +309,7 @@ const orderSchema = new Schema(
     promotionDetail: promotionSchema,
     addressDetail: addressDetail,
     paymentInformation: paymentInformation,
-    shippingDetail: { type: Array, required: false },
+    shippingDetail: { type: String, required: false },
   },
   { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }
 );
@@ -286,6 +323,21 @@ const menuSchema = new Schema(
   { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }
 );
 
+const CategoryModel = mongoose.model("category", categorySchema);
+const searchKeywordSchema = new Schema(
+  {
+    keyword: { type: String, required: true, index: true },
+    productId: { type: Schema.Types.ObjectId, ref: "product", required: true },
+    categoryId: {
+      type: Schema.Types.ObjectId,
+      ref: CategoryModel,
+      required: true,
+    },
+    relevance: { type: Number, default: 1 }, // Optional field for relevance score
+  },
+  { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }
+);
+
 module.exports.attributeSchema = attributeSchema;
 module.exports.brandSchema = brandSchema;
 module.exports.categorySchema = categorySchema;
@@ -294,3 +346,4 @@ module.exports.productSchema = productSchema;
 module.exports.productStockSchema = productStock;
 module.exports.orderSchema = orderSchema;
 module.exports.menuSchema = menuSchema;
+module.exports.searchKeywordSchema = searchKeywordSchema;

@@ -1,6 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
+const Fuse = require("fuse.js");
 
 const frontCategoryRouter = express.Router();
 
@@ -15,6 +16,7 @@ const {
 
 const sellerSchema = require("../../models/seller");
 const pageCategorySchema = require("../../models/page-category");
+const searchKeywordJson = require("../../public/keywords.json");
 
 // load brand
 async function loadBrand(brand) {
@@ -88,14 +90,16 @@ async function getPreload(cats) {
     const category = [];
     const amountSlider = [];
     const attribute = [];
-    await pres.map(async (dd) => {
+    for (let xx = 0; xx < pres.length; xx++) {
+      const dd = pres[xx];
       brands.push(dd.productInformation.brand);
       colors.push(dd.productVariation.colorList.toString());
       category.push(dd.category.toString());
-      dd.productVariation.convertVarient !== undefined &&
-        dd.productVariation.convertVarient.map((vr) => {
-          amountSlider.push(parseInt(vr.variantPrice));
-        });
+      await ProductStock.find({ productId: dd._id }).then(async (prod) => {
+        for (let i = 0; i < prod.length; i++) {
+          amountSlider.push(parseInt(prod[i].sellingPrice));
+        }
+      });
       dd.productVariation.attributes !== undefined &&
         dd.productVariation.attributes.map((vr, i) => {
           if (vr !== "Color" && vr !== "color") {
@@ -123,7 +127,7 @@ async function getPreload(cats) {
             }
           }
         });
-    });
+    }
     resource.filters = {
       //   brands: removeDuplicates(brands),
       //   colors: removeDuplicates(colors),
@@ -132,6 +136,7 @@ async function getPreload(cats) {
       totalProducts: pres.length,
       amountSlider: findMinMax(amountSlider),
     };
+    // console.log(amountSlider);
     return await loadBrand(removeDuplicates(brands)).then(async function (
       response
     ) {
@@ -149,8 +154,50 @@ async function getPreload(cats) {
   });
 }
 
-frontCategoryRouter.get("/get-category/:categoryid", function (req, res) {
+function getSearchNgramsProduct(input) {
+  const options = {
+    includeScore: true,
+    includeMatches: true,
+    threshold: 0.3,
+    keys: ["keyword"],
+  };
+  const fuse = new Fuse(searchKeywordJson, options);
+  const ngrams = generateNGrams(input);
+  let results = [];
+
+  ngrams.forEach((ngram) => {
+    const matches = fuse.search(ngram);
+    results = results.concat(matches);
+  });
+
+  // Remove duplicates and sort by score
+  results = results
+    .filter(
+      (v, i, a) => a.findIndex((t) => t.item.keyword === v.item.keyword) === i
+    )
+    .sort((a, b) => a.score - b.score);
+  const dd = results.map((result) => ({
+    productId: result.item.productId,
+  }));
+  return dd;
+}
+
+const generateNGrams = (str) => {
+  const tokens = str.split(" ").map((token) => token.toLowerCase());
+  const ngrams = new Set();
+
+  for (let i = 0; i < tokens.length; i++) {
+    for (let j = i + 1; j <= tokens.length; j++) {
+      ngrams.add(tokens.slice(i, j).join(" "));
+    }
+  }
+
+  return Array.from(ngrams);
+};
+
+frontCategoryRouter.post("/get-category/:categoryid", function (req, res) {
   const PageCategoryModel = mongoose.model("page_category", pageCategorySchema);
+  const CategoryModel = mongoose.model("category", categorySchema);
   const ProductStock = mongoose.model("product_stock", productStockSchema);
   const ProductModel = mongoose.model("product", productSchema);
 
@@ -158,60 +205,87 @@ frontCategoryRouter.get("/get-category/:categoryid", function (req, res) {
   PageCategoryModel.countDocuments({ "seoMetaTags.url": categoryParam }).then(
     async function (count) {
       if (count === 0) {
-        res.send({
-          type: "error",
-          message: "Category not found",
+        const searchProduct = getSearchNgramsProduct(req.body.q);
+        // if search results or direct category
+        await CategoryModel.findOne({
+          name: categoryParam,
+        }).then(async function (cres) {
+          const query = { $and: [] };
+          // if (Array.isArray(searchProduct) && searchProduct.length > 0) {
+          const arr = searchProduct.map((sr) => {
+            return sr.productId;
+          });
+          query.$and.push({ _id: { $in: arr } });
+          console.log(query);
+          // }
+          // query.$or.push({ category: cres._id });
+          query.$and.push({ approvedStatus: true });
+          query.$and.push({ publishedStatus: true });
+          await ProductModel.find({
+            _id: { $in: ["6693dc85d58c49c356b2044d"] },
+          })
+            .populate({ path: "productInformation.brand", select: ["name"] })
+            .select([
+              "productInformation.name",
+              "productInformation.brand",
+              "productInformation.seller",
+              "productImages.thumbnail",
+              "productVariation.colorList",
+              "productVariation.attributes",
+              "productVariation.variation",
+              "seoMetaTags.url",
+              "category",
+              "productStocks.unitPrice",
+              "productStocks.sellingPrice",
+              "productStocks.quantity",
+            ])
+            .limit(20)
+            .exec()
+            .then(async function (pres) {
+              getPreload([cres._id]).then((ccres) => {
+                pres.map(async (dd, i) => {
+                  await ProductStock.findOne({ productId: dd._id }).then(
+                    async function (ps) {
+                      pres[i].productStocks.unitPrice = ps?.mrp;
+                      pres[i].productStocks.sellingPrice = ps?.sellingPrice;
+                      pres[i].productStocks.quantity = ps?.quantity;
+                    }
+                  );
+                  if (pres.length - 1 === i) {
+                    res.send({ type: "success", data: pres, resource: ccres });
+                  }
+                });
+              });
+            })
+            .catch((err) => {
+              console.error(err);
+            });
         });
       } else {
-        // getPreload().then(function (dd) {
-        //   console.log(dd);
-        // });
-        // ProductModel.find({})
-        //   .select(["productInformation.brand"])
-        //   .limit(20)
-        //   .then((result) => {
-        //     console.log(result);
-        //   });
-        // return;
         await PageCategoryModel.findOne({
           "seoMetaTags.url": categoryParam,
         }).then(async function (cres) {
-          await ProductModel.aggregate([
-            {
-              $lookup: {
-                from: "brands",
-                localField: "productInformation.brand",
-                foreignField: "_id",
-                as: "brd",
-              },
-            },
-            {
-              $project: {
-                "productInformation.name": 1,
-                "productInformation.brand": 1,
-                "productInformation.seller": 1,
-                "productImages.thumbnail": 1,
-                "productVariation.colorList": 1,
-                "productVariation.attributes": 1,
-                "productVariation.variation": 1,
-                "seoMetaTags.url": 1,
-                category: 1,
-                "brd.name": 1,
-                "productStocks.unitPrice": 1,
-                "productStocks.sellingPrice": 1,
-                "productStocks.quantity": 1,
-              },
-            },
-            {
-              $match: {
-                category: { $in: cres.category },
-                // approvedStatus: true,
-                // publishedStatus: true,
-              },
-            },
-          ])
+          await ProductModel.find({
+            category: { $in: cres.category },
+            approvedStatus: true,
+            publishedStatus: true,
+          })
+            .populate({ path: "productInformation.brand", select: ["name"] })
+            .select([
+              "productInformation.name",
+              "productInformation.brand",
+              "productInformation.seller",
+              "productImages.thumbnail",
+              "productVariation.colorList",
+              "productVariation.attributes",
+              "productVariation.variation",
+              "seoMetaTags.url",
+              "category",
+              "productStocks.unitPrice",
+              "productStocks.sellingPrice",
+              "productStocks.quantity",
+            ])
             .limit(20)
-            .exec()
             .then(async function (pres) {
               getPreload(cres.category).then((ccres) => {
                 pres.map(async (dd, i) => {
@@ -354,10 +428,24 @@ frontCategoryRouter.post(
       //     publishedStatus: true,
       //   });
       //   console.log(query);
-      await ProductModel.aggregate(aggregationPipeline)
+      await ProductModel.find(matchCondition)
+        .populate({ path: "productInformation.brand", select: ["name"] })
+        .select([
+          "productInformation.name",
+          "productInformation.brand",
+          "productInformation.seller",
+          "productImages.thumbnail",
+          "productVariation.colorList",
+          "productVariation.attributes",
+          "productVariation.variation",
+          "seoMetaTags.url",
+          "category",
+          "productStocks.unitPrice",
+          "productStocks.sellingPrice",
+          "productStocks.quantity",
+        ])
         .skip(skipAmount)
         .limit(pageSize)
-        .exec()
         .then(async function (pres) {
           pres.map(async (dd, i) => {
             await ProductStock.findOne({ productId: dd._id }).then(

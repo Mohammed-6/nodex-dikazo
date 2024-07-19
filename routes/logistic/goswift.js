@@ -6,9 +6,9 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const GOSWIFT_PREFIX = "https://app.goswift.in/";
-const GOSWIFT_USER = "orders@dikazo.com";
-const GOSWIFT_PASS = "Dikazo@123";
-const GOSWIFT_CLIENT = "6540a1bc6ebc2d0f228c011a";
+const GOSWIFT_USER = "account@biyaan.in";
+const GOSWIFT_PASS = "AcountForLogistic@12";
+const GOSWIFT_CLIENT = "663356ae92256f56462952e9";
 
 async function generateToken() {
   const url = GOSWIFT_PREFIX + "integrations/v2/auth/token/" + GOSWIFT_CLIENT;
@@ -70,19 +70,19 @@ goswiftRouter.post("/goswift/generate/:id", async function (req, res) {
           weight:
             pd.productDetail.weight === null
               ? 1
-              : parseInt(pd.productDetail.weight * 10),
+              : parseInt(pd.productDetail.weight),
           length:
             pd.productDetail.length === null
               ? 1
-              : parseInt(pd.productDetail.length * 10),
+              : parseInt(pd.productDetail.length),
           height:
             pd.productDetail.height === null
               ? 1
-              : parseInt(pd.productDetail.height * 10),
+              : parseInt(pd.productDetail.height),
           width:
             pd.productDetail.width === null
               ? 1
-              : parseInt(pd.productDetail.width * 10),
+              : parseInt(pd.productDetail.width),
           // return_reason: "string",
           drop_location: {
             location_type:
@@ -97,26 +97,32 @@ goswiftRouter.post("/goswift/generate/:id", async function (req, res) {
             pin: parseInt(result.addressDetail.pincode),
           },
           pickup_location: {
-            name: pd.shopInformation.name,
+            name: pd.shopInformation.shopName,
           },
           return_location: {
-            name: pd.shopInformation.name,
+            name: pd.shopInformation.shopName,
           },
           // what3words_address: "string",
         };
-        axios
-          .put(GOSWIFT_PREFIX + "api/v1/package/create", shipmentData, {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: "Bearer " + accessToken,
-            },
-          })
-          .then(async (response) => {
-            await OrderModel.findOneAndUpdate(
-              { orderCode: orderCode },
-              { $push: { shippingDetail: response.data } }
-            ).then(() => {
-              if (k === result.productDetail.length - 1) {
+        if (req.body.number === k) {
+          axios
+            .put(GOSWIFT_PREFIX + "api/v1/package/create", shipmentData, {
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + accessToken,
+              },
+            })
+            .then(async (response) => {
+              await OrderModel.updateOne(
+                { productDetail: req.body.mainId },
+                {
+                  $set: {
+                    shippingDetail: response.data,
+                    shippingStatus: true,
+                    shippingType: "goswift",
+                  },
+                }
+              ).then(() => {
                 OrderModel.findOne({ orderCode: orderCode }).then((resp) => {
                   res.send({
                     type: "success",
@@ -124,17 +130,17 @@ goswiftRouter.post("/goswift/generate/:id", async function (req, res) {
                     data: resp,
                   });
                 });
-              }
+              });
+            })
+            .catch((error) => {
+              // console.error(error.response.data);
+              res.send({
+                type: "error",
+                message: "Some error occurred",
+                data: error.response.data,
+              });
             });
-          })
-          .catch((error) => {
-            // console.error(error.response.data);
-            res.send({
-              type: "error",
-              message: "Some error occurred",
-              data: error.response.data,
-            });
-          });
+        }
       });
     })
     .catch((error) => {
@@ -384,6 +390,34 @@ goswiftRouter.post("/goswift/pincode/service/:id", async function (req, res) {
 
   axios
     .get(GOSWIFT_PREFIX + "api/v2/serviceability/" + req.params.id, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + accessToken,
+      },
+    })
+    .then(function (response) {
+      res.send({
+        type: "success",
+        message: "Pincode fetch successfully",
+        data: response.data,
+      });
+    })
+    .catch((error) => {
+      // console.error(error.response.data);
+      res.send({
+        type: "error",
+        message: "Some error occurred",
+        data: error.response.data,
+      });
+    });
+});
+
+goswiftRouter.post("/goswift/add-address", async function (req, res) {
+  const token = await generateToken();
+  const accessToken = token.access_token;
+
+  axios
+    .post(GOSWIFT_PREFIX + "api/v2/address", req.body, {
       headers: {
         "Content-Type": "application/json",
         Authorization: "Bearer " + accessToken,

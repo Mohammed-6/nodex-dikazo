@@ -1,4 +1,6 @@
 const express = require("express");
+const fs = require("fs");
+const path = require("path");
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
@@ -11,6 +13,7 @@ const {
   attributeSchema,
   categorySchema,
   productStockSchema,
+  searchKeywordSchema,
 } = require("../../models/product");
 
 const sellerSchema = require("../../models/seller");
@@ -102,6 +105,10 @@ productRouter.post("/add-product", async function (req, res) {
   var ProductModel = mongoose.model("product", productSchema);
   var ProductStockModel = mongoose.model("product_stock", productStockSchema);
   const alldata = req.body;
+  const keywords = alldata.productInformation.tags;
+  const seoKeyword = alldata.seoMetaTags.keyword.split(",");
+  keywords.concat(seoKeyword);
+  console.log(seoKeyword);
   delete alldata._id;
   await ProductModel.create(alldata).then(async (product) => {
     const db = [];
@@ -109,6 +116,7 @@ productRouter.post("/add-product", async function (req, res) {
       alldata.productStock[i].productId = product._id;
     });
     console.log(alldata.productStock);
+    // await insertOrUpdateKeywords(product._id, alldata.category, keywords);
     await ProductStockModel.insertMany(alldata.productStock)
       .then(async (stk) => {
         res.send({
@@ -151,6 +159,10 @@ productRouter.post("/update-product", async function (req, res) {
   var ProductModel = mongoose.model("product", productSchema);
   var ProductStockModel = mongoose.model("product_stock", productStockSchema);
   const alldata = req.body;
+  const keywords = alldata.productInformation.tags;
+  const seoKeyword = alldata.seoMetaTags.keyword.split(",");
+  keywords.push(...seoKeyword);
+  // console.log(keywords);
   delete alldata.productVariation.convertVarient;
   alldata.productStock.map(async (ps) => {
     await ProductStockModel.findOneAndUpdate(
@@ -160,6 +172,7 @@ productRouter.post("/update-product", async function (req, res) {
     );
   });
   delete alldata.productStock;
+  await insertOrUpdateKeywords(req.body._id, alldata.category, keywords);
   ProductModel.findOneAndUpdate({ _id: req.body._id }, alldata).then(
     (response) => {
       res.send({
@@ -170,6 +183,109 @@ productRouter.post("/update-product", async function (req, res) {
     }
   );
 });
+
+const removeLeadingSpaces = (arr) => {
+  return arr.map((item) => {
+    return item[0] === " " ? item.trimStart() : item;
+  });
+};
+
+const insertOrUpdateKeywords = async (productId, category, keyword) => {
+  const keywords = removeLeadingSpaces(keyword);
+  var SearchKeyword = mongoose.model("searchkeyword", searchKeywordSchema);
+  category.map(async (categoryId, i) => {
+    try {
+      // Fetch existing keywords for the product
+      const existingKeywords = await SearchKeyword.find({ productId }).exec();
+
+      // Create a set of existing keyword strings for quick lookup
+      const existingKeywordSet = new Set(
+        existingKeywords.map((kw) => kw.keyword)
+      );
+
+      // Determine keywords to insert (those that don't already exist)
+      const keywordsToInsert = keywords.filter(
+        (keyword) => !existingKeywordSet.has(keyword)
+      );
+
+      // Prepare documents for insertion
+      const keywordDocs = keywordsToInsert.map((keyword) => ({
+        keyword,
+        productId: productId,
+        categoryId: categoryId,
+        relevance: 1, // Default relevance score
+      }));
+
+      // Insert new keywords
+      if (keywordDocs.length > 0) {
+        await SearchKeyword.insertMany(keywordDocs);
+        console.log("Inserted keywords:", keywordDocs);
+      } else {
+        console.log("No new keywords to insert.");
+      }
+
+      // Determine keywords to remove (those not in the new array)
+      const keywordsToRemove = existingKeywords
+        .filter((kw) => !keywords.includes(kw.keyword))
+        .map((kw) => kw._id);
+
+      // Remove outdated keywords
+      if (keywordsToRemove.length > 0) {
+        await SearchKeyword.deleteMany({ _id: { $in: keywordsToRemove } });
+        console.log("Removed keywords:", keywordsToRemove);
+      } else {
+        console.log("No keywords to remove.");
+      }
+    } catch (error) {
+      console.error("Error inserting, updating, or cleaning keywords:", error);
+    }
+  });
+};
+
+// list keywords
+productRouter.post("/list-keywords", async function (req, res) {
+  var SearchKeyword = mongoose.model("searchkeyword", searchKeywordSchema);
+  let colte = [];
+  const keywords = await SearchKeyword.find({})
+    .populate({ path: "categoryId", select: ["_id", "name"] })
+    .exec();
+  for (let i = 0; i <= keywords.length; i++) {
+    const dd = keywords[i];
+    if (dd !== undefined) {
+      const main = {
+        keyword: dd.keyword,
+        category: dd.categoryId.name,
+        productId: dd._id,
+      };
+      colte.push(main);
+    }
+    if (i === keywords.length - 1) {
+      saveJsonToFile("../../public/keywords.json", colte);
+      res.send({
+        type: "success",
+        message: "keyword list",
+        data: colte,
+      });
+    }
+  }
+});
+
+// Function to write data to a file
+const saveJsonToFile = (filename, jsonData) => {
+  // Construct the file path in the public folder
+  const filePath = path.join(__dirname, filename);
+  // Convert JSON data to a string
+  const jsonString = JSON.stringify(jsonData, null, 2); // Pretty-print the JSON with 2-space indentation
+
+  // Write the JSON string to the file
+  fs.writeFile(filePath, jsonString, "utf8", (err) => {
+    if (err) {
+      console.error("Error writing to file:", err);
+      return;
+    }
+    console.log("JSON data has been saved to the file successfully.");
+  });
+};
 
 // list product
 productRouter.post("/list-product", async function (req, res) {
@@ -270,7 +386,7 @@ productRouter.post("/search-product", (req, res) => {
       {
         path: "productInformation.seller",
         model: "seller",
-        select: "personalInfomration.name",
+        select: "shopInformation.shopName",
       },
     ])
     .limit(5)
@@ -374,7 +490,7 @@ productRouter.post("/import-product", (req, res) => {
           { $set: stk },
           { upsert: true }
         );
-      })
+      });
     } else {
       delete colte._id;
       colte.productVariation.convertVarient = alldata.variant[i];
@@ -384,7 +500,7 @@ productRouter.post("/import-product", (req, res) => {
           temp.productId = response._id;
           await ProductStockModel.create(temp);
         });
-      })
+      });
     }
   });
   res.send("Product updated successfully");
