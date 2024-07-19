@@ -324,10 +324,11 @@ const menuSchema = new Schema(
 );
 
 const CategoryModel = mongoose.model("category", categorySchema);
+const ProductModel = mongoose.model("product", productSchema);
 const searchKeywordSchema = new Schema(
   {
     keyword: { type: String, required: true, index: true },
-    productId: { type: Schema.Types.ObjectId, ref: "product", required: true },
+    productId: { type: Schema.Types.ObjectId, ref: ProductModel, required: true },
     categoryId: {
       type: Schema.Types.ObjectId,
       ref: CategoryModel,

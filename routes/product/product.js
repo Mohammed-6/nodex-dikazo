@@ -107,8 +107,7 @@ productRouter.post("/add-product", async function (req, res) {
   const alldata = req.body;
   const keywords = alldata.productInformation.tags;
   const seoKeyword = alldata.seoMetaTags.keyword.split(",");
-  keywords.concat(seoKeyword);
-  console.log(seoKeyword);
+  keywords.push(...seoKeyword);
   delete alldata._id;
   await ProductModel.create(alldata).then(async (product) => {
     const db = [];
@@ -116,7 +115,7 @@ productRouter.post("/add-product", async function (req, res) {
       alldata.productStock[i].productId = product._id;
     });
     console.log(alldata.productStock);
-    // await insertOrUpdateKeywords(product._id, alldata.category, keywords);
+    await insertOrUpdateKeywords(product._id, alldata.category, keywords);
     await ProductStockModel.insertMany(alldata.productStock)
       .then(async (stk) => {
         res.send({
@@ -248,6 +247,7 @@ productRouter.post("/list-keywords", async function (req, res) {
   let colte = [];
   const keywords = await SearchKeyword.find({})
     .populate({ path: "categoryId", select: ["_id", "name"] })
+    .populate({ path: "productId", select: ["_id"] })
     .exec();
   for (let i = 0; i <= keywords.length; i++) {
     const dd = keywords[i];
@@ -255,7 +255,7 @@ productRouter.post("/list-keywords", async function (req, res) {
       const main = {
         keyword: dd.keyword,
         category: dd.categoryId.name,
-        productId: dd._id,
+        productId: dd.productId._id,
       };
       colte.push(main);
     }

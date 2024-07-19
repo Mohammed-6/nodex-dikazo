@@ -210,20 +210,18 @@ frontCategoryRouter.post("/get-category/:categoryid", function (req, res) {
         await CategoryModel.findOne({
           name: categoryParam,
         }).then(async function (cres) {
-          const query = { $and: [] };
-          // if (Array.isArray(searchProduct) && searchProduct.length > 0) {
+          const query = { $and: [], $or: []};
+          if (Array.isArray(searchProduct) && searchProduct.length > 0) {
           const arr = searchProduct.map((sr) => {
             return sr.productId;
           });
           query.$and.push({ _id: { $in: arr } });
           console.log(query);
-          // }
-          // query.$or.push({ category: cres._id });
+          }
+          query.$or.push({ category: cres._id });
           query.$and.push({ approvedStatus: true });
           query.$and.push({ publishedStatus: true });
-          await ProductModel.find({
-            _id: { $in: ["6693dc85d58c49c356b2044d"] },
-          })
+          await ProductModel.find(query)
             .populate({ path: "productInformation.brand", select: ["name"] })
             .select([
               "productInformation.name",

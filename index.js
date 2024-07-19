@@ -64,6 +64,6 @@ app.use("/v2", customerRouter);
 app.use("/v2", frontProfileRouter);
 app.use("/v2", homepageRouter);
 
-app.listen(process.env.PORT | 4004, function () {
+app.listen(process.env.PORT | 4006, function () {
   console.log("now listening for requests");
 });
