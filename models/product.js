@@ -280,7 +280,7 @@ const prdInfo = new Schema({
   shippingStatus: { type: Boolean, required: false, default: false },
   shippingDetail: { type: Object, required: false },
   orderStatus: { type: Boolean, required: false, default: true },
-  shippingType: { type: String, required: false },
+  shippingPartner: { type: String, required: false },
 });
 
 const paymentInformation = new Schema({
@@ -328,7 +328,11 @@ const ProductModel = mongoose.model("product", productSchema);
 const searchKeywordSchema = new Schema(
   {
     keyword: { type: String, required: true, index: true },
-    productId: { type: Schema.Types.ObjectId, ref: ProductModel, required: true },
+    productId: {
+      type: Schema.Types.ObjectId,
+      ref: ProductModel,
+      required: true,
+    },
     categoryId: {
       type: Schema.Types.ObjectId,
       ref: CategoryModel,

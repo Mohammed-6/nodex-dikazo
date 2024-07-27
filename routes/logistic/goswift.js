@@ -113,13 +113,14 @@ goswiftRouter.post("/goswift/generate/:id", async function (req, res) {
               },
             })
             .then(async (response) => {
-              await OrderModel.updateOne(
-                { productDetail: req.body.mainId },
+              console.log(response.data);
+              await OrderModel.findOneAndUpdate(
+                { orderCode: orderCode, "productDetail._id": req.body.mainId },
                 {
                   $set: {
-                    shippingDetail: response.data,
-                    shippingStatus: true,
-                    shippingType: "goswift",
+                    "productDetail.$.shippingDetail": response.data,
+                    "productDetail.$.shippingStatus": true,
+                    "productDetail.$.shippingPartner": "goswift",
                   },
                 }
               ).then(() => {
@@ -133,11 +134,11 @@ goswiftRouter.post("/goswift/generate/:id", async function (req, res) {
               });
             })
             .catch((error) => {
-              // console.error(error.response.data);
+              console.error(error);
               res.send({
                 type: "error",
                 message: "Some error occurred",
-                data: error.response.data,
+                data: error,
               });
             });
         }
@@ -185,7 +186,7 @@ goswiftRouter.post("/goswift/track/:id", async function (req, res) {
   const accessToken = token.access_token;
 
   axios
-    .get(GOSWIFT_PREFIX + "api/v1/package/track/" + req.params.id, {
+    .get(GOSWIFT_PREFIX + "api/v1/track/" + req.params.id, {
       headers: {
         "Content-Type": "application/json",
         Authorization: "Bearer " + accessToken,
@@ -203,7 +204,7 @@ goswiftRouter.post("/goswift/track/:id", async function (req, res) {
       res.send({
         type: "error",
         message: "Some error occurred",
-        data: error.response.data,
+        data: error,
       });
     });
 });
@@ -217,6 +218,7 @@ goswiftRouter.get("/goswift/label/:id", async function (req, res) {
       GOSWIFT_PREFIX + "api/v1/package/label",
       { ids: [req.params.id] },
       {
+        responseType: "arraybuffer",
         headers: {
           "Content-Type": "application/json",
           Authorization: "Bearer " + accessToken,
@@ -224,11 +226,7 @@ goswiftRouter.get("/goswift/label/:id", async function (req, res) {
       }
     )
     .then(function (response) {
-      res.send({
-        type: "success",
-        message: "shipping details fetch successfully",
-        data: response.data,
-      });
+      res.send(response.data);
     })
     .catch((error) => {
       // console.error(error.response.data);

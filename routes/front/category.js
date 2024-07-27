@@ -210,13 +210,13 @@ frontCategoryRouter.post("/get-category/:categoryid", function (req, res) {
         await CategoryModel.findOne({
           name: categoryParam,
         }).then(async function (cres) {
-          const query = { $and: [], $or: []};
+          const query = { $and: [], $or: [] };
           if (Array.isArray(searchProduct) && searchProduct.length > 0) {
-          const arr = searchProduct.map((sr) => {
-            return sr.productId;
-          });
-          query.$and.push({ _id: { $in: arr } });
-          console.log(query);
+            const arr = searchProduct.map((sr) => {
+              return sr.productId;
+            });
+            query.$and.push({ _id: { $in: arr } });
+            console.log(query);
           }
           query.$or.push({ category: cres._id });
           query.$and.push({ approvedStatus: true });
@@ -324,156 +324,112 @@ frontCategoryRouter.post(
 
     const skipAmount = pageNumber * pageSize;
 
-    console.log(skipAmount);
+    // console.log(skipAmount);
 
-    await PageCategoryModel.findOne({
+    const exists = await PageCategoryModel.findOne({
       "seoMetaTags.url": categoryParam,
-    }).then(async function (cres) {
-      // category
-      let cat = cres.category;
-      if (filter.category.length > 0) {
-        cat = filter.category;
-      }
-      const aggregationPipeline = [
-        {
-          $addFields: {
-            productIdAsObjectId: {
-              $toObjectId: "$productInformation.brand",
-            },
-          },
-        },
-        {
-          $lookup: {
-            from: "brands",
-            localField: "productIdAsObjectId",
-            foreignField: "_id",
-            as: "brd",
-          },
-        },
-        {
-          $project: {
-            "productInformation.name": 1,
-            "productInformation.brand": 1,
-            "productInformation.seller": 1,
-            "productImages.thumbnail": 1,
-            "productVariation.colorList": 1,
-            "productVariation.attributes": 1,
-            "productVariation.variation": 1,
-            "seoMetaTags.url": 1,
-            category: 1,
-            "brd.name": 1,
-            "productStocks.unitPrice": 1,
-            "productStocks.sellingPrice": 1,
-            "productStocks.quantity": 1,
-          },
-        },
-      ];
+    }).exec();
+    // console.log(exists);
+    // category
+    let cat = [];
+    if (exists !== null) {
+      // cat = [exists.category];
+    }
+    if (filter.category.length > 0) {
+      cat = filter.category;
+    }
 
-      const matchCondition = {};
-      //category
+    const matchCondition = {};
+    //category
+    if (cat.length > 0) {
+      console.log(cat);
       matchCondition.$or = [{ category: { $in: cat } }];
+    }
 
-      // brand
-      if (filter.brand.length > 0) {
-        const objectIdArray = filter.brand.map(
-          (str) => new mongoose.Types.ObjectId(str)
-        );
-        matchCondition.$and = [
-          { "productInformation.brand": { $in: objectIdArray } },
-        ];
-      }
-      // color
-      if (filter.color.length > 0) {
-        matchCondition.$and = [
-          { "productVariation.colorList": { $in: filter.color } },
-        ];
-      }
-      // price
-      //   if (filter.price.length > 0 && filter.price[0][1] !== null) {
-      //     // console.log(filter.price[0][1]);
-      //     const min = filter.price[0][0];
-      //     const max = filter.price[0][1];
-      //     matchCondition.$and = [
-      //       {
-      //         "productVariation.convertVarient.variantPrice": {
-      //           $gte: min,
-      //           $lte: max,
-      //         },
-      //       },
-      //     ];
-      //   }
-      // attribute
-      if (filter.attribute.length > 0) {
-        filter.attribute.map((attr) => {
-          attr.value.map((val) => {
-            matchCondition.$and = [
-              { "productVariation.variation": { $elemMatch: { $eq: [val] } } },
-            ];
-          });
+    // brand
+    if (filter.brand.length > 0) {
+      const objectIdArray = filter.brand.map(
+        (str) => new mongoose.Types.ObjectId(str)
+      );
+      matchCondition.$and = [
+        { "productInformation.brand": { $in: objectIdArray } },
+      ];
+    }
+    // color
+    if (filter.color.length > 0) {
+      matchCondition.$and = [
+        { "productVariation.colorList": { $in: filter.color } },
+      ];
+    }
+    // attribute
+    if (filter.attribute.length > 0) {
+      filter.attribute.map((attr) => {
+        attr.value.map((val) => {
+          matchCondition.$and = [
+            { "productVariation.variation": { $elemMatch: { $eq: [val] } } },
+          ];
         });
-      }
-      //   matchCondition.$or = [{ approvedStatus: true }];
-      aggregationPipeline.push({
-        $match: matchCondition,
       });
-      //   query.$and.push({
-      //     category: cat,
-      //   });
-      //   query.$and.push({
-      //     approvedStatus: true,
-      //   });
-      //   query.$and.push({
-      //     publishedStatus: true,
-      //   });
-      //   console.log(query);
-      await ProductModel.find(matchCondition)
-        .populate({ path: "productInformation.brand", select: ["name"] })
-        .select([
-          "productInformation.name",
-          "productInformation.brand",
-          "productInformation.seller",
-          "productImages.thumbnail",
-          "productVariation.colorList",
-          "productVariation.attributes",
-          "productVariation.variation",
-          "seoMetaTags.url",
-          "category",
-          "productStocks.unitPrice",
-          "productStocks.sellingPrice",
-          "productStocks.quantity",
-        ])
-        .skip(skipAmount)
-        .limit(pageSize)
-        .then(async function (pres) {
-          pres.map(async (dd, i) => {
-            await ProductStock.findOne({ productId: dd._id }).then(
-              async function (ps) {
-                if (ps !== null && pres[i] !== undefined) {
-                  pres[i].productStocks.unitPrice = ps.mrp;
-                  pres[i].productStocks.sellingPrice = ps.sellingPrice;
-                  pres[i].productStocks.quantity = ps.quantity;
-                  // remove
-                  if (filter.price.length > 0 && filter.price[0][1] !== null) {
-                    const min = filter.price[0][0];
-                    const max = filter.price[0][1];
-                    if (ps.sellingPrice > min && ps.sellingPrice < max) {
-                      //   console.log(i);
-                    } else {
-                      pres.splice(i, 1);
-                    }
+    }
+
+    //   query.$and.push({
+    //     category: cat,
+    //   });
+    //   query.$and.push({
+    //     approvedStatus: true,
+    //   });
+    //   query.$and.push({
+    //     publishedStatus: true,
+    //   });
+    //   console.log(query);
+    await ProductModel.find(matchCondition)
+      .populate({ path: "productInformation.brand", select: ["name"] })
+      .select([
+        "productInformation.name",
+        "productInformation.brand",
+        "productInformation.seller",
+        "productImages.thumbnail",
+        "productVariation.colorList",
+        "productVariation.attributes",
+        "productVariation.variation",
+        "seoMetaTags.url",
+        "category",
+        "productStocks.unitPrice",
+        "productStocks.sellingPrice",
+        "productStocks.quantity",
+      ])
+      .skip(skipAmount)
+      .limit(pageSize)
+      .then(async function (pres) {
+        pres.map(async (dd, i) => {
+          await ProductStock.findOne({ productId: dd._id }).then(
+            async function (ps) {
+              if (ps !== null && pres[i] !== undefined) {
+                pres[i].productStocks.unitPrice = ps.mrp;
+                pres[i].productStocks.sellingPrice = ps.sellingPrice;
+                pres[i].productStocks.quantity = ps.quantity;
+                // remove
+                if (filter.price.length > 0 && filter.price[0][1] !== null) {
+                  const min = filter.price[0][0];
+                  const max = filter.price[0][1];
+                  if (ps.sellingPrice > min && ps.sellingPrice < max) {
+                    //   console.log(i);
+                  } else {
+                    pres.splice(i, 1);
                   }
                 }
               }
-            );
-            if (pres.length - 1 === i) {
-              res.send({ type: "success", data: pres });
             }
-          });
-        })
-        .catch((err) => {
-          console.error(err);
+          );
+          if (pres.length - 1 === i) {
+            res.send({ type: "success", data: pres });
+          }
         });
-    });
+      })
+      .catch((err) => {
+        console.error(err);
+      });
+    // });
   }
 );
 
